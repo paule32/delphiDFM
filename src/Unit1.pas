@@ -56,7 +56,6 @@ type
     AdvGlowButton3: TAdvGlowButton;
     AdvGlowButton4: TAdvGlowButton;
     JvPanel6: TJvPanel;
-    JvPanel7: TJvPanel;
     SynEdit1: TSynEdit;
     SynEdit2: TSynEdit;
     AdvGlowButton5: TAdvGlowButton;
@@ -65,6 +64,9 @@ type
     SelectAllButton: TAdvGlowButton;
     CopyButton: TAdvGlowButton;
     PasteButton: TAdvGlowButton;
+    AdvGlowButton7: TAdvGlowButton;
+    JvPanel7: TJvPanel;
+    AdvGlowButton8: TAdvGlowButton;
     procedure ExitMenuClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure AdvGlowButton3Click(Sender: TObject);
@@ -74,6 +76,8 @@ type
     procedure SelectAllButtonClick(Sender: TObject);
     procedure CopyButtonClick(Sender: TObject);
     procedure PasteButtonClick(Sender: TObject);
+    procedure AdvGlowButton2Click(Sender: TObject);
+    procedure AdvGlowButton7Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -88,6 +92,14 @@ implementation
 {$R *.dfm}
 
 uses parser;
+
+resourcestring
+selectFileStr        = 'Please Select a File ...';
+noInputFileStr       = 'no input file selected.';
+noOutputFileStr      = 'no output file selected.';
+opAbortedStr         = 'operation aborted.';
+opOverWriteOutputStr = 'Overwrite output file ?';
+sInformationStr      = 'Information';
 
 procedure TForm1.ExitMenuClick(Sender: TObject);
 begin
@@ -176,12 +188,23 @@ end;
 procedure TForm1.OutputArrowButtonClick(Sender: TObject);
 var
   stream: TMemoryStream;
+  astr: string;
 begin
   stream := nil;
   try
     stream := TMemoryStream.Create;
     try
-      stream.LoadFromFile((Sender as TMenuItem).Caption);
+      if (Sender is TMenuItem) then
+      begin
+        astr := (Sender as TMenuItem).Caption;
+        astr := StringReplace(astr,'&','',[rfReplaceAll]);
+        stream.LoadFromFile(astr);
+      end else
+      if (Sender is TJvArrowButton) then
+      begin
+        astr := (Sender as TJvArrowButton).Caption;
+        stream.LoadFromFile(astr);
+      end;
       SynEdit2.Lines.LoadFromStream(stream);
     except
       on E: Exception do
@@ -224,6 +247,66 @@ begin
   if SynEdit2.Focused then begin
      SynEdit2.PasteFromClipboard;
   end;
+end;
+
+procedure TForm1.AdvGlowButton2Click(Sender: TObject);
+var
+  processed: Boolean;
+begin
+  processed := False;
+
+  if (InputArrowButton.Caption = selectFileStr)
+  or (InputArrowButton.Caption = 'Please Select a File ...') then
+  begin
+    ShowMessage(noInputFileStr);
+    Exit;
+  end;
+
+  if (OutputArrowButton.Caption = selectFileStr)
+  or (OutputArrowButton.Caption = 'Please Select a File ...') then
+  begin
+    ShowMessage(noOutputFileStr);
+    Exit;
+  end;
+
+  if (ExtractFileExt(OutputArrowButton.Caption) = '.pas')
+  or (ExtractFileExt(OutputArrowButton.Caption) = '.dfm') then
+  begin
+    if FileExists(OutputArrowButton.Caption) then
+    begin
+       if Application.MessageBox(
+          PChar(opOverWriteOutputStr),
+          PChar(sInformationStr),MB_YESNO) = IDNO then
+       begin
+          ShowMessage(opAbortedStr);
+          Exit;
+       end;
+    end;
+    try
+      myparser(
+        InputArrowButton .Caption,
+        OutputArrowButton.Caption
+      );
+      processed := True;
+    except
+      on E: Exception do
+      begin
+         ShowMessage(E.Message);
+         Exit;
+      end;
+    end;
+  end;
+
+  if not processed then
+  begin
+    ShowMessage('error, not processed right.');
+  end;
+end;
+
+procedure TForm1.AdvGlowButton7Click(Sender: TObject);
+begin
+  ShowMessage(JvOpenDialog1.FileName);
+  SynEdit1.Lines.SaveToFile(JvOpenDialog1.FileName);
 end;
 
 end.
